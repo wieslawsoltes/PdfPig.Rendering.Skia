@@ -14,7 +14,11 @@
 
 using System;
 using System.Collections.Generic;
+<<<<<<< Updated upstream
 using System.Linq;
+=======
+using System.Globalization;
+>>>>>>> Stashed changes
 using SkiaSharp;
 using UglyToad.PdfPig.Annotations;
 using UglyToad.PdfPig.Content;
@@ -102,6 +106,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
                 using (var recorder = new SKPictureRecorder())
                 using (_canvas = recorder.BeginRecording(SKRect.Create(_width, _height)))
                 {
+<<<<<<< Updated upstream
                     if (_renderAnnotations)
                     {
                         DrawAnnotations(true);
@@ -113,6 +118,14 @@ namespace UglyToad.PdfPig.Rendering.Skia
                     {
                         DrawAnnotations(false);
                     }
+=======
+                    
+                    Console.WriteLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{_width.ToString(CultureInfo.InvariantCulture)}\" height=\"{_height.ToString(CultureInfo.InvariantCulture)}\">");
+
+                    ProcessOperations(operations);
+
+                    Console.WriteLine($"</svg>");
+>>>>>>> Stashed changes
 
                     _canvas.Flush();
 

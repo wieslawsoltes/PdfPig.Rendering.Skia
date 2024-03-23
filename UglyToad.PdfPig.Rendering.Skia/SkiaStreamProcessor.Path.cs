@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Globalization;
 using SkiaSharp;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Graphics;
@@ -220,6 +221,20 @@ namespace UglyToad.PdfPig.Rendering.Skia
                     currentState.LineDashPattern, currentState.CurrentTransformationMatrix);
                 _canvas.DrawPath(_currentPath, paint);
 
+                
+                
+                var m = currentState.CurrentTransformationMatrix;
+                Console.WriteLine($"<!-- PaintStrokePath -->");
+                Console.WriteLine($"<path");
+                var (r, g, b) = currentState.CurrentStrokingColor.ToRGBValues();
+                Console.WriteLine($"stroke=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
+                Console.WriteLine($"fill=\"none\"");
+                Console.WriteLine($"d=\"{_currentPath.ToSvgPathData()}\"");
+                //Console.WriteLine($"transform=\"matrix({m.A.ToString(CultureInfo.InvariantCulture)} {m.B.ToString(CultureInfo.InvariantCulture)} {m.C.ToString(CultureInfo.InvariantCulture)} {m.D.ToString(CultureInfo.InvariantCulture)} {m.E.ToString(CultureInfo.InvariantCulture)} {m.F.ToString(CultureInfo.InvariantCulture)})\"");
+                Console.WriteLine($" />");
+                
+                
+
                 /* No cache method
                 using (var paint = new SKPaint())
                 using (var dash = currentState.LineDashPattern.ToSKPathEffect((float)currentState.LineWidth))
@@ -290,6 +305,19 @@ namespace UglyToad.PdfPig.Rendering.Skia
                 var paint = _paintCache.GetPaint(currentState.CurrentNonStrokingColor,
                     currentState.AlphaConstantNonStroking, false, null, null, null, null, null);
                 _canvas.DrawPath(_currentPath, paint);
+
+
+                var m = currentState.CurrentTransformationMatrix;
+                Console.WriteLine($"<!-- PaintFillPath -->");
+                Console.WriteLine($"<path");
+                Console.WriteLine($"stroke=\"none\"");
+                var (r, g, b) = currentState.CurrentNonStrokingColor.ToRGBValues();
+                Console.WriteLine($"fill=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
+                Console.WriteLine($"d=\"{_currentPath.ToSvgPathData()}\"");
+                //Console.WriteLine($"transform=\"matrix({m.A.ToString(CultureInfo.InvariantCulture)} {m.B.ToString(CultureInfo.InvariantCulture)} {m.C.ToString(CultureInfo.InvariantCulture)} {m.D.ToString(CultureInfo.InvariantCulture)} {m.E.ToString(CultureInfo.InvariantCulture)} {m.F.ToString(CultureInfo.InvariantCulture)})\"");
+                Console.WriteLine($" />");
+                
+                
 
                 /* No cache method
                 using (SKPaint paint = new SKPaint()
