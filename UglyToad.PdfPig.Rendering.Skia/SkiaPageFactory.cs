@@ -65,9 +65,11 @@ namespace UglyToad.PdfPig.Rendering.Skia
             // Special case where cropbox is outside mediabox: use cropbox instead of intersection
             var effectiveCropBox = new CropBox(mediaBox.Bounds.Intersect(cropBox.Bounds) ?? cropBox.Bounds);
 
+            var listener = SkiaRenderCapture.GetCurrent();
+
             var context = new SkiaStreamProcessor(pageNumber, ResourceStore, PdfScanner, PageContentParser,
                 FilterProvider, effectiveCropBox, userSpaceUnit, rotation, initialMatrix, ParsingOptions,
-                annotationProvider, dictionary, _fontCache);
+                annotationProvider, dictionary, _fontCache, listener);
 
             return context.Process(pageNumber, operations);
         }

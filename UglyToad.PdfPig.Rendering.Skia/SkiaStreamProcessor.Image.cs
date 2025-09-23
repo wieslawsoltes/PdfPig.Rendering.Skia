@@ -59,6 +59,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
                     using (var bitmap = SKBitmap.Decode(image.GetImageBytes()))
                     {
                         _canvas.DrawBitmap(bitmap, destRect, _paintCache.GetAntialiasing());
+                        NotifyImage(bitmap, destRect, image);
                     }
                 }
                 else
@@ -71,7 +72,9 @@ namespace UglyToad.PdfPig.Rendering.Skia
                     using (new SKAutoCanvasRestore(_canvas, true))
                     {
                         _canvas.SetMatrix(matrix);
-                        _canvas.DrawBitmap(bitmap, matrix.MapRect(destRect), _paintCache.GetAntialiasing());
+                        var mappedRect = matrix.MapRect(destRect);
+                        _canvas.DrawBitmap(bitmap, mappedRect, _paintCache.GetAntialiasing());
+                        NotifyImage(bitmap, mappedRect, image);
                     }
                 }
 
@@ -87,5 +90,24 @@ namespace UglyToad.PdfPig.Rendering.Skia
             _canvas.DrawRect(destRect, _paintCache.GetImageDebug());
 #endif
         }
+        private void NotifyImage(SKBitmap bitmap, SKRect renderRect, IPdfImage image)
+        {
+            if (_listener is null)
+            {
+                return;
+            }
+
+            using var skImage = SKImage.FromBitmap(bitmap);
+            using var encoded = skImage.Encode(SKEncodedImageFormat.Png, 100);
+            if (encoded == null)
+            {
+                return;
+            }
+
+            var bytes = encoded.ToArray();
+            var renderImage = new SkiaRenderImage(bytes, renderRect, CurrentTransformationMatrix, image.WidthInSamples, image.HeightInSamples);
+            _listener.OnImage(renderImage);
+        }
+
     }
 }

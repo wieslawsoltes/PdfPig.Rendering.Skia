@@ -13,7 +13,6 @@
 // limitations under the License.
 
 using System;
-using System.Globalization;
 using SkiaSharp;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Graphics;
@@ -114,16 +113,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
                         var fillBrush = _paintCache.GetPaint(nonStrokingColor, currentState.AlphaConstantNonStroking, false,
                             null, null, null, null, null);
                         _canvas.DrawPath(transformedPath, fillBrush);
-                        
-
-                       Console.WriteLine($"<!-- ShowVectorFontGlyph -->");
-                       Console.WriteLine($"<path");
-                       var (r, g, b) = nonStrokingColor.ToRGBValues();
-                       Console.WriteLine($"fill=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
-                       Console.WriteLine($"stroke=\"none\"");
-                       Console.WriteLine($"d=\"{transformedPath.ToSvgPathData()}\"");
-                       Console.WriteLine($" />");
-                        
+                        EmitFillPath(transformedPath, fillBrush);
                     }
                 }
 
@@ -134,25 +124,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
                         (float)currentState.LineWidth, currentState.JoinStyle, currentState.CapStyle,
                         currentState.LineDashPattern, currentState.CurrentTransformationMatrix);
                     _canvas.DrawPath(transformedPath, strokePaint);
-                    
-                    
-                    Console.WriteLine($"<!-- ShowVectorFontGlyph -->");
-                    Console.WriteLine($"<path");
-                    var (r, g, b) = strokingColor.ToRGBValues();
-                    Console.WriteLine($"stroke=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
-                    Console.WriteLine($"fill=\"none\"");
-                    Console.WriteLine($"d=\"{transformedPath.ToSvgPathData()}\"");
-                    Console.WriteLine($" />");
-                    
-                    
-                    /*
-                    Console.WriteLine($"<!-- ShowVectorFontGlyph (stroke)-->");
-                    Console.WriteLine($"<path");
-                    Console.WriteLine($"fill=\"none\"");
-                    Console.WriteLine($"d=\"{transformedPath.ToSvgPathData()}\"");
-                    Console.WriteLine($" />");
-                    //*/
-                    
+                    EmitStrokePath(transformedPath, strokePaint, currentState.LineDashPattern, currentState.LineWidth);
                 }
             }
 
@@ -214,20 +186,6 @@ namespace UglyToad.PdfPig.Rendering.Skia
 
                 _canvas.DrawText(unicode, startBaseLine, fontPaint);
                 _canvas.ResetMatrix();
-                
-                
-                Console.WriteLine($"<!-- PaintStrokePath -->");
-                Console.Write($"<text");
-                var (r, g, b) = color.ToRGBValues();
-                Console.Write($"stroke=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
-                Console.Write($"fill=\"none\"");
-                if (transformedPdfBounds.Rotation != 0)
-                {
-                    Console.Write($"rotate=\"#{(-transformedPdfBounds.Rotation).ToString(CultureInfo.InvariantCulture)}\"");
-                }
-                Console.Write($">");
-                Console.Write($"{unicode}");
-                Console.WriteLine($"<text/>");
             }
         }
 

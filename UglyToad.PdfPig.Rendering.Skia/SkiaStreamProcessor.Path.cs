@@ -13,10 +13,10 @@
 // limitations under the License.
 
 using System;
-using System.Globalization;
 using SkiaSharp;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Graphics;
+using UglyToad.PdfPig.Graphics.Core;
 using UglyToad.PdfPig.Graphics.Colors;
 using UglyToad.PdfPig.Rendering.Skia.Helpers;
 
@@ -220,36 +220,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
                     (float)currentState.LineWidth, currentState.JoinStyle, currentState.CapStyle,
                     currentState.LineDashPattern, currentState.CurrentTransformationMatrix);
                 _canvas.DrawPath(_currentPath, paint);
-
-                
-                
-                var m = currentState.CurrentTransformationMatrix;
-                Console.WriteLine($"<!-- PaintStrokePath -->");
-                Console.WriteLine($"<path");
-                var (r, g, b) = currentState.CurrentStrokingColor.ToRGBValues();
-                Console.WriteLine($"stroke=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
-                Console.WriteLine($"fill=\"none\"");
-                Console.WriteLine($"d=\"{_currentPath.ToSvgPathData()}\"");
-                //Console.WriteLine($"transform=\"matrix({m.A.ToString(CultureInfo.InvariantCulture)} {m.B.ToString(CultureInfo.InvariantCulture)} {m.C.ToString(CultureInfo.InvariantCulture)} {m.D.ToString(CultureInfo.InvariantCulture)} {m.E.ToString(CultureInfo.InvariantCulture)} {m.F.ToString(CultureInfo.InvariantCulture)})\"");
-                Console.WriteLine($" />");
-                
-                
-
-                /* No cache method
-                using (var paint = new SKPaint())
-                using (var dash = currentState.LineDashPattern.ToSKPathEffect((float)currentState.LineWidth))
-                {
-                    paint.IsAntialias = _antiAliasing;
-                    paint.Color = currentState.GetCurrentStrokingColorSKColor();
-                    paint.Style = SKPaintStyle.Stroke;
-                    paint.StrokeWidth = MathF.Max(_minimumLinwWidth, GetScaledLineWidth()); // A guess
-                    paint.StrokeJoin = currentState.JoinStyle.ToSKStrokeJoin();
-                    paint.StrokeCap = currentState.CapStyle.ToSKStrokeCap();
-                    paint.PathEffect = dash;
-                    //paint.BlendMode = currentGraphicsState.BlendMode.ToSKBlendMode();
-                    _canvas.DrawPath(CurrentPath, paint);
-                }
-                */
+                EmitStrokePath(_currentPath, paint, currentState.LineDashPattern, currentState.LineWidth);
             }
         }
 
@@ -305,32 +276,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
                 var paint = _paintCache.GetPaint(currentState.CurrentNonStrokingColor,
                     currentState.AlphaConstantNonStroking, false, null, null, null, null, null);
                 _canvas.DrawPath(_currentPath, paint);
-
-
-                var m = currentState.CurrentTransformationMatrix;
-                Console.WriteLine($"<!-- PaintFillPath -->");
-                Console.WriteLine($"<path");
-                Console.WriteLine($"stroke=\"none\"");
-                var (r, g, b) = currentState.CurrentNonStrokingColor.ToRGBValues();
-                Console.WriteLine($"fill=\"#{(byte)(r*255):X2}{(byte)(g*255):X2}{(byte)(b*255):X2}\"");
-                Console.WriteLine($"d=\"{_currentPath.ToSvgPathData()}\"");
-                //Console.WriteLine($"transform=\"matrix({m.A.ToString(CultureInfo.InvariantCulture)} {m.B.ToString(CultureInfo.InvariantCulture)} {m.C.ToString(CultureInfo.InvariantCulture)} {m.D.ToString(CultureInfo.InvariantCulture)} {m.E.ToString(CultureInfo.InvariantCulture)} {m.F.ToString(CultureInfo.InvariantCulture)})\"");
-                Console.WriteLine($" />");
-                
-                
-
-                /* No cache method
-                using (SKPaint paint = new SKPaint()
-                {
-                    IsAntialias = _antiAliasing,
-                    Color = currentState.GetCurrentNonStrokingColorSKColor(),
-                    Style = SKPaintStyle.Fill
-                })
-                {
-                    //paint.BlendMode = currentGraphicsState.BlendMode.ToSKBlendMode();
-                    _canvas!.DrawPath(CurrentPath, paint);
-                }
-                */
+                EmitFillPath(_currentPath, paint);
             }
         }
 
@@ -354,5 +300,31 @@ namespace UglyToad.PdfPig.Rendering.Skia
             _currentPath.Dispose();
             _currentPath = null;
         }
+        private void EmitStrokePath(SKPath sourcePath, SKPaint paint, LineDashPattern lineDashPattern, double lineWidth)
+        {
+            if (_listener is null)
+            {
+                return;
+            }
+
+            var pathClone = new SKPath(sourcePath);
+            var (dashArray, dashPhase) = lineDashPattern.ToDashArrayAndPhase((float)lineWidth);
+            var stroke = new SkiaStrokeStyle(paint.Color, paint.Color.Alpha / 255f, paint.StrokeWidth,
+                paint.StrokeJoin, paint.StrokeCap, dashArray, dashPhase);
+            _listener.OnPath(new SkiaRenderPath(pathClone, stroke, null));
+        }
+
+        private void EmitFillPath(SKPath sourcePath, SKPaint paint)
+        {
+            if (_listener is null)
+            {
+                return;
+            }
+
+            var pathClone = new SKPath(sourcePath);
+            var fill = new SkiaFillStyle(paint.Color, paint.Color.Alpha / 255f);
+            _listener.OnPath(new SkiaRenderPath(pathClone, null, fill));
+        }
+
     }
 }

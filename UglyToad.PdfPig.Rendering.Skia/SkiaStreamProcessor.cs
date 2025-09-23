@@ -14,11 +14,7 @@
 
 using System;
 using System.Collections.Generic;
-<<<<<<< Updated upstream
 using System.Linq;
-=======
-using System.Globalization;
->>>>>>> Stashed changes
 using SkiaSharp;
 using UglyToad.PdfPig.Annotations;
 using UglyToad.PdfPig.Content;
@@ -32,16 +28,22 @@ using UglyToad.PdfPig.Rendering.Skia.Helpers;
 using UglyToad.PdfPig.Tokenization.Scanner;
 using UglyToad.PdfPig.Tokens;
 
+#nullable enable
+
 namespace UglyToad.PdfPig.Rendering.Skia
 {
     internal partial class SkiaStreamProcessor : BaseStreamProcessor<SKPicture>
     {
         private readonly bool _renderAnnotations = true; // TODO - param
-
         private readonly int _height;
         private readonly int _width;
+        private readonly FontCache _fontCache;
+        private readonly SKPaintCache _paintCache = new SKPaintCache(_antiAliasing, _minimumLineWidth);
+        private readonly DictionaryToken _pageDictionary;
+        private readonly AnnotationProvider _annotationProvider;
+        private readonly ISkiaPageRenderListener? _listener;
 
-        private SKCanvas _canvas;
+        private SKCanvas _canvas = null!;
 
         private const bool _antiAliasing = true;
 
@@ -49,13 +51,6 @@ namespace UglyToad.PdfPig.Rendering.Skia
         /// Inverse direction of y-axis
         /// </summary>
         private readonly SKMatrix _yAxisFlipMatrix;
-
-        private readonly FontCache _fontCache;
-        private readonly SKPaintCache _paintCache = new SKPaintCache(_antiAliasing, _minimumLineWidth);
-
-        private readonly DictionaryToken _pageDictionary;
-
-        private readonly AnnotationProvider _annotationProvider;
 
         public SkiaStreamProcessor(
             int pageNumber,
@@ -70,7 +65,8 @@ namespace UglyToad.PdfPig.Rendering.Skia
             ParsingOptions parsingOptions,
             AnnotationProvider annotationProvider,
             DictionaryToken pageDictionary,
-            FontCache fontCache)
+            FontCache fontCache,
+            ISkiaPageRenderListener? listener = null)
             : base(pageNumber,
                 resourceStore,
                 pdfScanner,
@@ -84,10 +80,10 @@ namespace UglyToad.PdfPig.Rendering.Skia
         {
             _pageDictionary = pageDictionary;
             _annotationProvider = annotationProvider;
+            _fontCache = fontCache;
+            _listener = listener;
 
             _annotations = new Lazy<Annotation[]>(() => _annotationProvider.GetAnnotations().ToArray());
-
-            _fontCache = fontCache;
 
             _width = (int)cropBox.Bounds.Width;
             _height = (int)cropBox.Bounds.Height;
@@ -106,26 +102,26 @@ namespace UglyToad.PdfPig.Rendering.Skia
                 using (var recorder = new SKPictureRecorder())
                 using (_canvas = recorder.BeginRecording(SKRect.Create(_width, _height)))
                 {
-<<<<<<< Updated upstream
-                    if (_renderAnnotations)
+                    try
                     {
-                        DrawAnnotations(true);
+                        _listener?.BeginPage(new SkiaRenderPageInfo(pageNumberCurrent, _width, _height));
+
+                        if (_renderAnnotations)
+                        {
+                            DrawAnnotations(true);
+                        }
+
+                        ProcessOperations(operations);
+
+                        if (_renderAnnotations)
+                        {
+                            DrawAnnotations(false);
+                        }
                     }
-
-                    ProcessOperations(operations);
-
-                    if (_renderAnnotations)
+                    finally
                     {
-                        DrawAnnotations(false);
+                        _listener?.EndPage();
                     }
-=======
-                    
-                    Console.WriteLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{_width.ToString(CultureInfo.InvariantCulture)}\" height=\"{_height.ToString(CultureInfo.InvariantCulture)}\">");
-
-                    ProcessOperations(operations);
-
-                    Console.WriteLine($"</svg>");
->>>>>>> Stashed changes
 
                     _canvas.Flush();
 

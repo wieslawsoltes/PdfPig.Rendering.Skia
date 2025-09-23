@@ -21,6 +21,8 @@ using UglyToad.PdfPig.Graphics.Colors;
 using UglyToad.PdfPig.Graphics.Core;
 using UglyToad.PdfPig.PdfFonts;
 
+#nullable enable
+
 namespace UglyToad.PdfPig.Rendering.Skia.Helpers
 {
     internal static class SkiaExtensions
@@ -100,42 +102,46 @@ namespace UglyToad.PdfPig.Rendering.Skia.Helpers
 
         public static SKPathEffect ToSKPathEffect(this LineDashPattern lineDashPattern, float lineWidth)
         {
+            var (pattern, phase) = lineDashPattern.ToDashArrayAndPhase(lineWidth);
+            if (pattern == null)
+            {
+                return null;
+            }
+
+            return SKPathEffect.CreateDash(pattern, phase);
+        }
+
+        internal static (float[]? Pattern, float Phase) ToDashArrayAndPhase(this LineDashPattern lineDashPattern, float lineWidth)
+        {
             const float oneOver72 = (float)(1.0 / 72.0);
 
             if (lineDashPattern.Phase == 0 && !(lineDashPattern.Array?.Count > 0))
             {
-                return null;
+                return (null, 0f);
             }
 
             float scale = lineWidth * oneOver72 / 2; // Scale is still not correct
             float phase = lineDashPattern.Phase * scale;
 
-            if (lineDashPattern.Array.Count == 1)
+            if (lineDashPattern.Array?.Count == 1)
             {
                 var v = (float)lineDashPattern.Array[0] * scale;
-                return SKPathEffect.CreateDash(new[] { v, v }, phase);
+                return (new[] { v, v }, phase);
             }
 
-            if (lineDashPattern.Array.Count > 0)
+            if (lineDashPattern.Array?.Count > 0)
             {
                 float[] pattern = new float[lineDashPattern.Array.Count];
                 for (int i = 0; i < lineDashPattern.Array.Count; i++)
                 {
                     var v = (float)lineDashPattern.Array[i] * scale;
-                    if (v == 0)
-                    {
-                        pattern[i] = oneOver72;
-                    }
-                    else
-                    {
-                        pattern[i] = v;
-                    }
+                    pattern[i] = v == 0 ? oneOver72 : v;
                 }
 
-                return SKPathEffect.CreateDash(pattern, phase);
+                return (pattern, phase);
             }
 
-            return SKPathEffect.CreateDash(new float[] { 0, 0 }, phase);
+            return (new float[] { 0, 0 }, phase);
         }
 
         public static bool? IsStroke(this TextRenderingMode textRenderingMode)
