@@ -20,6 +20,8 @@ using UglyToad.PdfPig.Graphics.Colors;
 using UglyToad.PdfPig.PdfFonts;
 using UglyToad.PdfPig.Rendering.Skia.Helpers;
 
+#nullable enable
+
 namespace UglyToad.PdfPig.Rendering.Skia
 {
     internal partial class SkiaStreamProcessor
@@ -34,7 +36,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
 
             if (_fontCache.TryGetPath(font, code, out SKPath path))
             {
-                ShowVectorFontGlyph(path, strokingColor, nonStrokingColor, textRenderingMode, renderingMatrix,
+                ShowVectorFontGlyph(font, unicode, pointSize, path, strokingColor, nonStrokingColor, textRenderingMode, renderingMatrix,
                     textMatrix, transformationMatrix);
             }
             else
@@ -49,7 +51,7 @@ namespace UglyToad.PdfPig.Rendering.Skia
             }
         }
 
-        private void ShowVectorFontGlyph(SKPath path, IColor strokingColor, IColor nonStrokingColor,
+        private void ShowVectorFontGlyph(IFont font, string unicode, double pointSize, SKPath path, IColor strokingColor, IColor nonStrokingColor,
             TextRenderingMode textRenderingMode, TransformationMatrix renderingMatrix, TransformationMatrix textMatrix,
             TransformationMatrix transformationMatrix)
         {
@@ -81,6 +83,8 @@ namespace UglyToad.PdfPig.Rendering.Skia
             using (var transformedPath = new SKPath())
             {
                 path.Transform(transformMatrix, transformedPath);
+                SkiaFillStyle? glyphFill = null;
+                SkiaStrokeStyle? glyphStroke = null;
                 if (fill.Value)
                 {
                     // Do fill first
@@ -113,7 +117,8 @@ namespace UglyToad.PdfPig.Rendering.Skia
                         var fillBrush = _paintCache.GetPaint(nonStrokingColor, currentState.AlphaConstantNonStroking, false,
                             null, null, null, null, null);
                         _canvas.DrawPath(transformedPath, fillBrush);
-                        EmitFillPath(transformedPath, fillBrush);
+                        glyphFill = CreateFillStyle(fillBrush);
+                        EmitFillPath(transformedPath, fillBrush, isText: true, fillStyle: glyphFill);
                     }
                 }
 
@@ -124,8 +129,18 @@ namespace UglyToad.PdfPig.Rendering.Skia
                         (float)currentState.LineWidth, currentState.JoinStyle, currentState.CapStyle,
                         currentState.LineDashPattern, currentState.CurrentTransformationMatrix);
                     _canvas.DrawPath(transformedPath, strokePaint);
-                    EmitStrokePath(transformedPath, strokePaint, currentState.LineDashPattern, currentState.LineWidth);
+                    glyphStroke = CreateStrokeStyle(strokePaint, currentState.LineDashPattern, currentState.LineWidth);
+                    EmitStrokePath(transformedPath, strokePaint, currentState.LineDashPattern, currentState.LineWidth, isText: true, strokeStyle: glyphStroke);
                 }
+
+                _listener?.OnGlyph(new SkiaRenderGlyph(
+                    unicode ?? string.Empty,
+                    transformMatrix,
+                    glyphFill,
+                    glyphStroke,
+                    (float)pointSize,
+                    font.GetCleanFontName(),
+                    transformedPath.Bounds));
             }
 
             /* // No caching method

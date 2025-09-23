@@ -91,6 +91,12 @@ namespace UglyToad.PdfPig.Rendering.Skia
         void OnPath(SkiaRenderPath path);
 
         /// <summary>
+        /// Called for every text glyph rendered on the page.
+        /// </summary>
+        /// <param name="glyph">The rendered glyph information.</param>
+        void OnGlyph(SkiaRenderGlyph glyph);
+
+        /// <summary>
         /// Called for every raster image rendered on the page.
         /// </summary>
         /// <param name="image">The rendered image.</param>
@@ -147,11 +153,13 @@ namespace UglyToad.PdfPig.Rendering.Skia
         /// <param name="path">The rendered Skia path.</param>
         /// <param name="stroke">Stroke information, if any.</param>
         /// <param name="fill">Fill information, if any.</param>
-        public SkiaRenderPath(SKPath path, SkiaStrokeStyle? stroke, SkiaFillStyle? fill)
+        /// <param name="isText">Indicates whether the path originated from a text glyph.</param>
+        public SkiaRenderPath(SKPath path, SkiaStrokeStyle? stroke, SkiaFillStyle? fill, bool isText)
         {
             Path = path ?? throw new ArgumentNullException(nameof(path));
             Stroke = stroke;
             Fill = fill;
+            IsText = isText;
         }
 
         /// <summary>
@@ -168,6 +176,11 @@ namespace UglyToad.PdfPig.Rendering.Skia
         /// Gets the fill styling applied to the path, if any.
         /// </summary>
         public SkiaFillStyle? Fill { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the path originated from a text glyph.
+        /// </summary>
+        public bool IsText { get; }
 
         /// <summary>
         /// Releases the underlying Skia path instance.
@@ -231,6 +244,61 @@ namespace UglyToad.PdfPig.Rendering.Skia
         /// Gets the dash phase offset applied to the stroke.
         /// </summary>
         public float DashPhase { get; }
+    }
+
+    /// <summary>
+    /// Represents a rendered text glyph and its styling information.
+    /// </summary>
+    public sealed class SkiaRenderGlyph
+    {
+        /// <summary>
+        /// Initializes a new instance containing glyph information.
+        /// </summary>
+        public SkiaRenderGlyph(string unicode, SKMatrix transform, SkiaFillStyle? fill, SkiaStrokeStyle? stroke, float fontSize, string? fontName, SKRect bounds)
+        {
+            Unicode = unicode;
+            Transform = transform;
+            Fill = fill;
+            Stroke = stroke;
+            FontSize = fontSize;
+            FontName = fontName;
+            Bounds = bounds;
+        }
+
+        /// <summary>
+        /// Gets the Unicode string represented by this glyph.
+        /// </summary>
+        public string Unicode { get; }
+
+        /// <summary>
+        /// Gets the transformation matrix applied to the glyph.
+        /// </summary>
+        public SKMatrix Transform { get; }
+
+        /// <summary>
+        /// Gets the fill style used when rendering the glyph, if any.
+        /// </summary>
+        public SkiaFillStyle? Fill { get; }
+
+        /// <summary>
+        /// Gets the stroke style used when rendering the glyph, if any.
+        /// </summary>
+        public SkiaStrokeStyle? Stroke { get; }
+
+        /// <summary>
+        /// Gets the glyph font size in user units.
+        /// </summary>
+        public float FontSize { get; }
+
+        /// <summary>
+        /// Gets the font name if available.
+        /// </summary>
+        public string? FontName { get; }
+
+        /// <summary>
+        /// Gets the axis-aligned bounds of the glyph in page coordinates before scaling.
+        /// </summary>
+        public SKRect Bounds { get; }
     }
 
     /// <summary>
