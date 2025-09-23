@@ -20,6 +20,8 @@ using UglyToad.PdfPig.Graphics.Core;
 using UglyToad.PdfPig.Graphics.Colors;
 using UglyToad.PdfPig.Rendering.Skia.Helpers;
 
+#nullable enable
+
 namespace UglyToad.PdfPig.Rendering.Skia
 {
     internal partial class SkiaStreamProcessor
@@ -300,21 +302,22 @@ namespace UglyToad.PdfPig.Rendering.Skia
             _currentPath.Dispose();
             _currentPath = null;
         }
-        private void EmitStrokePath(SKPath sourcePath, SKPaint paint, LineDashPattern lineDashPattern, double lineWidth)
-        {
-            if (_listener is null)
-            {
-                return;
-            }
 
-            var pathClone = new SKPath(sourcePath);
-            var (dashArray, dashPhase) = lineDashPattern.ToDashArrayAndPhase((float)lineWidth);
-            var stroke = new SkiaStrokeStyle(paint.Color, paint.Color.Alpha / 255f, paint.StrokeWidth,
+        private static SkiaStrokeStyle CreateStrokeStyle(SKPaint paint, LineDashPattern? lineDashPattern, double lineWidth)
+        {
+            var dashInfo = lineDashPattern.HasValue ? lineDashPattern.Value.ToDashArrayAndPhase((float)lineWidth) : (Pattern: (float[]?)null, Phase: 0f);
+            var dashArray = dashInfo.Pattern;
+            var dashPhase = dashInfo.Phase;
+            return new SkiaStrokeStyle(paint.Color, paint.Color.Alpha / 255f, paint.StrokeWidth,
                 paint.StrokeJoin, paint.StrokeCap, dashArray, dashPhase);
-            _listener.OnPath(new SkiaRenderPath(pathClone, stroke, null));
         }
 
-        private void EmitFillPath(SKPath sourcePath, SKPaint paint)
+        private static SkiaFillStyle CreateFillStyle(SKPaint paint)
+        {
+            return new SkiaFillStyle(paint.Color, paint.Color.Alpha / 255f);
+        }
+
+        private void EmitStrokePath(SKPath sourcePath, SKPaint paint, LineDashPattern? lineDashPattern, double lineWidth, bool isText = false, SkiaStrokeStyle? strokeStyle = null)
         {
             if (_listener is null)
             {
@@ -322,8 +325,20 @@ namespace UglyToad.PdfPig.Rendering.Skia
             }
 
             var pathClone = new SKPath(sourcePath);
-            var fill = new SkiaFillStyle(paint.Color, paint.Color.Alpha / 255f);
-            _listener.OnPath(new SkiaRenderPath(pathClone, null, fill));
+            var stroke = strokeStyle ?? CreateStrokeStyle(paint, lineDashPattern, lineWidth);
+            _listener.OnPath(new SkiaRenderPath(pathClone, stroke, null, isText));
+        }
+
+        private void EmitFillPath(SKPath sourcePath, SKPaint paint, bool isText = false, SkiaFillStyle? fillStyle = null)
+        {
+            if (_listener is null)
+            {
+                return;
+            }
+
+            var pathClone = new SKPath(sourcePath);
+            var fill = fillStyle ?? CreateFillStyle(paint);
+            _listener.OnPath(new SkiaRenderPath(pathClone, null, fill, isText));
         }
 
     }
